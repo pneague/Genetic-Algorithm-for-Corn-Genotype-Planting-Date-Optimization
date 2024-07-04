@@ -1,0 +1,535 @@
+#!/bin/sh
+#
+myscen=rcp45
+#myscen=historical
+#mychange_code=TT
+mychange_code='NEW_SETUP'
+#########################################
+# EXEMPLU de submit
+
+# [500 6000]; [10,300]; [300 1700]; [7975,7975]; [200, 2000]; [100,9000]  
+#./hh2_NEW_SETUP_P+dates ${pet1} ${pet2} ${pet3} ${pet6} ${ndat00} ${ndinc} $mymodel  $myyst $myyen 
+#### submit: ######
+#./hh2_NEW_SETUP_P+dates 500 10 300 100 93 1 CNRM-CERFACS-CNRM-CM5-SMHI-RCA4 2031 2031 
+################### 0. Set-up PETRU ################################################
+usecodes=1
+#pet1=500
+#pet2=50
+#pet3=700
+#pet4=798
+#pet5=9
+#pet6=48
+
+
+#lmin='100  10  500 798  6 35'
+#lmax='600 290 1500 798 12 75'
+#mymodel='CNRM-CERFACS-CNRM-CM5-SMHI-RCA4'
+#myscen=rcp45
+#myyst=2031
+#myyen=2031
+#mychange_code='P1'
+
+#usecodes=$1
+
+pet1=$1
+pet2=$2
+pet3=$3
+#pet4=$4
+#pet5=$5
+pet6=$4
+ndat00=$5       # e.g orice valoare intre 31+28+(10+1) ( 11 Martie) si 31+28+31+30+31=31 Mai) => [ 70, 151] 
+ndinc=$6        # increment in days ; here set to 1
+mymodel=$7
+myyst=$8
+myyen=$9
+
+
+pet4=7975
+pet5=860
+ndinc=1
+
+#mychange_code=$12
+#myyst=2033
+#myyen=2033
+
+echo $usecodes ${pet1} ${pet2} ${pet3} ${pet6} ${ndat00} ${ndinc} $mymodel  $myscen $myyst $myyen $mychange_code
+
+####################################################################
+
+myiter=${mychange_code}
+
+mydatain0=/home_DT4/Work/Petru/Model_DSSAT/DSSAT/WTH_Data_Petru
+##mydatain0=/home_DT4/WORK_RUNS_Prepclim/DSSAT_RUNS_Genotipare/DATE/Input_DSSAT
+mydaux=/home_DT4/Work/Petru/Model_DSSAT/DSSAT/AUXIL_Petru
+
+
+#myscen in historical rcp45  rcp85
+#mymodel in ICHEC-EC-EARTH-SMHI-RCA4 CNRM-CERFACS-CNRM-CM5-SMHI-RCA4 MPI-M-MPI-ESM-LR-SMHI-RCA4
+################### 0. Set-up ################################################
+##############################################################################
+#exeopt='A '${fax}' NA'
+############ sol: #####################
+soltype=1xN_CORR_soil_NOferti+ini_water_MARS_OPER
+csoltype=N1_noF+iniw
+######### genotype:class parameters ###
+#class=GENOTIP_hist+scen
+
+clsensit='Genotype'
+clexp=MZCER
+vmod=048
+sufix=CUL
+cltest=PG
+# initial PG change: #####
+npar=6
+nparm1=`expr ${npar} - 1 `
+ch0=0
+ch1=0
+ch2=0
+ch3=0
+ch4=0
+ch5=0
+
+###########################################################
+lfac_petru='10,100,1,10,100,100,1,1,1,1'
+
+#### Valori Pi input in linia de comanda in intervalele:
+# [500 6000]; [10,300]; [300 1700]; [7975,7975]; [200, 2000]; [100,9000]  
+###########################################################
+kode=576133
+
+if [ ${kode} -eq 576133 ] ; then
+lstep=' 5   7    6   1  3  3'
+lmin='100  10  500 798  6 30'
+lmax='500 260 1500 798 12 70'
+lfac='  1   100    1   1  1  1'
+fi
+
+# 655133
+if [ ${kode} -eq 655133 ] ; then
+lstep='6    5    5   1  3  3'
+lmin='80    5  500 798  6 35'
+lmax='560 285 1700 798 12 75'
+lfac='1   100    1   1  1  1'
+fi
+#
+# 555133
+if [ ${kode} -eq 555133 ] ; then
+lstep=' 5   5    5    1  3  3'
+lmin=' 50   5  500  798  7 35'
+lmax='500 285 1700  798 11 75'
+lfac='  1 100    1    1  1  1'
+fi
+#
+# 656133
+if [ ${kode} -eq 656133 ] ; then
+lstep='6    5    6   1  3  3'
+lmin='100  10  500 798  6 35'
+lmax='600 290 1500 798 12 75'
+lfac='1   100    1   1  1  1'
+fi
+#
+# 898533
+if [ ${kode} -eq 898533 ] ; then
+lstep='8    9    8   5  3  3'
+lmin='100  20  550 440  5 30'
+lmax='450 220 1075 940 15 50'
+lfac='1   100    1   1  1  1'
+fi
+#############
+lfac=${lfac_petru}
+#
+nrintmax=20
+nrparmax=20
+###################
+#model=CNRM-CERFACS-CNRM-CM5-SMHI-RCA4
+
+#model=MPI-M-MPI-ESM-LR-SMHI-RCA4
+
+#model=ICHEC-EC-EARTH-SMHI-RCA4
+
+#for model in ICHEC-EC-EARTH-SMHI-RCA4 CNRM-CERFACS-CNRM-CM5-SMHI-RCA4 MPI-M-MPI-ESM-LR-SMHI-RCA4 ; do
+for model in ${mymodel} ; do
+#scen=historical
+
+scen=${myscen}
+part=1
+period=1
+###############
+
+d000=/home_DT4/Work/Petru/Model_DSSAT/DSSAT/RUN_Petru
+d00=${d000}/RUN_${scen}
+d0=${d00}/dssat-csm-os-4.8.0.15/Data
+
+datain0scen=/home_DT4/WORK_RUNS_Prepclim/DSSAT_RUNS_Genotipare/DATE/Input_DSSAT
+daux=${d000}/AUXIL
+
+#faxtempl=FIFU9901.MZX_work_3xN_CORR+soil_ferti_OPER
+#faxtempl=FIFU9901.MZX_work_${soltype}
+faxtempl=FIFU9901.MZX_work_N80_NEW_SETUP
+fax=FIFU9901.MZX
+
+################ models, scenarios: #######
+#model=MARS
+#scen=Ctrl
+#part=1
+
+#for model in ICHEC-EC-EARTH-SMHI-RCA4 CNRM-CERFACS-CNRM-CM5-SMHI-RCA4 MPI-M-MPI-ESM-LR-SMHI-RCA4 ; do
+#scen=historical
+#scen=rcp45
+#scen=rcp85
+
+
+case ${scen} in \
+ Ctrl) clscen=MARS ;clscen4=MARS; datain0=${d0}/SAVES_WTHfiles_OPER_fin/SAVES_WTH/saves_Aug2022;
+        if [ ${part} -eq 1 ] ; then
+         yst=1976
+         yen=2005
+        fi;;
+ historical) clscen=HIST ; clscen4=HIST;datain0=${datain0scen}/${scen}/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=1976
+         yen=2005
+        fi;;
+ rcp45) clscen=RCP45 ; clscen4=RCP4;datain0=${datain0scen}/${scen}/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=2021
+         yen=2050
+        else 
+         yst=2070
+         yen=2099
+        fi ;; 
+ rcp85) clscen=RCP85 ;clscen4=RCP8;datain0=${datain0scen}/${scen}/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=2021
+         yen=2050
+        else 
+         yst=2070
+         yen=2099
+        fi ;; 
+esac
+
+# for Comaprison RUNS, use datain0, NOT ${mydatain0} #datain0=${mydatain0}
+echo "datain0=" ${datain0}
+
+dexp00=${d0}/LOOP_RES_${mychange_code}
+dexp0=${dexp00}/${scen}
+exp0=${dexp0}/${model}
+mkdir -p ${exp0}
+
+cd ${d0}
+
+mkdir -p old_tmp
+mv ${clscen}*.WTH old_tmp
+mv ${clscen4}*.WTH old_tmp
+
+echo "DATAIN0=" ${datain0}
+echo "clscen=" ${clscen}
+
+#cp ${datain0}/${clscen4}*.WTH .
+
+cp ${datain0}/${clscen}*.WTH .
+
+echo "date din: " ${datain0}
+ls -l ${clscen4}*.WTH 
+
+echo "in dir:" ${PWD}
+echo "d0=" ${d0}
+ls -l ${d0}/${clscen}*.WTH
+
+#type=3xN_CORR+soil_ferti_OPER
+cp ${mydaux}/SOIL.SOL_orig_RO  SOIL.SOL
+cp ${mydaux}/SOIL.SOL_orig_RO  soil.sol
+
+####################### 1., 2.:  the 2 loops: #########################
+##############################################################
+
+####  LOOP 1. YEAR  loop ####### (make FIFU9901.MZX file) #############
+#ys=${yst}
+#ye=${yen}
+
+ys=${myyst}
+ye=${myyen}
+
+yy=${ys}
+while [ ${yy} -le ${ye} ] ; do 
+yy2t=`expr ${yy} | cut -c 3-4 `
+yy2=`expr ${yy2t} + 100 | cut -c 2-3 `
+echo "YEAR=" ${yy2}
+
+fawin=${clscen}${yy}01.WTH
+fawinl=${clscen4}${yy2}01.WTH
+mv ${fawin} ${fawinl}
+echo "fawinl=" ${fawinl}
+ls -l ${fawinl}
+
+dout=${exp0}/YY_${yy}
+\rm -r ${dout}
+mkdir -p ${dout}
+
+#\rm fin_tmp* ${fax}
+
+
+plday1=` expr ${ndat00} + 1000 } cut -c2-4 `
+plday2='091'
+plday3='110'
+plday4='130'
+
+## harvest date
+/usr/bin/sed -e "1,\$s/1 95304/1 ${yy2}304/g" < ${mydaux}/${faxtempl} > fin_tmp1
+## irrigation date
+/usr/bin/sed -e "1,\$s/1 95115/1 ${yy2}115/g" <  fin_tmp1 > fin_tmp2
+## planting date date
+/usr/bin/sed -e "1,\$s/1 95${plday1}/1 ${yy2}${plday1}/g" <  fin_tmp2 > fin_tmp3
+/usr/bin/sed -e "1,\$s/2 95${plday2}/2 ${yy2}${plday2}/g" <  fin_tmp3 > fin_tmp4
+/usr/bin/sed -e "1,\$s/3 95${plday3}/3 ${yy2}${plday3}/g" <  fin_tmp4 > fin_tmp5
+/usr/bin/sed -e "1,\$s/4 95${plday4}/4 ${yy2}${plday4}/g" <  fin_tmp5 > fin_tmp6
+# harvest last
+/usr/bin/sed -e "1,\$s/95334/${yy2}334/g" <  fin_tmp6 > fin_tmp7
+# Wather file scen
+/usr/bin/sed -e "1,\$s/MARS/${clscen4}/g" <  fin_tmp7 > fin_tmp8
+## start   date date
+/usr/bin/sed -e "1,\$s/GE              1     1     S 95001/GE              ${period}     1     S ${yy2}001/g" <  fin_tmp8 > ${fax}
+
+#echo done, planting day loop, pday=' ${plday}
+#done
+#\rm fin_tmp*
+
+#fawinl=${clscen4}${yy2}01.WTH
+###############################
+
+echo "FOR FAX in DIR=" ${PWD}
+
+if [ ${usecodes} -ne 0 ] ; then
+
+####  LOOP 2. GENOTYPE loop (make MZCER.CUL file) #######
+
+for cultype in  'PIO 3475*       '  ; do
+
+echo "cultype=" ${cultype}
+
+case ${cultype} in \
+ 'PIO 3541        ') ccul='I0029_PIO_3541';culvar='IB0029';;
+ 'PIO 3707        ') ccul='I0030_PIO_3707';culvar='IB0030';;
+ 'PIO 3475*       ') ccul='I0031_PIOs_3475';culvar='IB0031';;
+ 'PIO 3382*       ') ccul='I0032_PIOs_3382';culvar='IB0032';;
+ 'PIO 3780        ') ccul='I0033_PIO_3780';culvar='IB0033';;
+ 'PIO 3780*       ') ccul='I0034_PIOs_3780';culvar='IB0034';;
+ 'PIO 3165        ') ccul='I0066_PIO_3324';culvar='IB0066';;
+ 'PIO 3324        ') ccul='I0067_PIO_3324';culvar='IB0067';;
+ 'PIO 3475        ') ccul='I0068_PIO_3475';culvar='IB0068';;
+ 'PIO 3475 orig   ') ccul='I0068_PIOo_3475';culvar='IB0068';;
+ 'PIO 3790        ') ccul='I0069_PIO_3790';culvar='IB0069';;
+esac
+
+doutc=${dout}/${ccul}
+mkdir -p ${doutc}
+
+#echo "done dir=" ${doutc}
+
+########## compute changes in P, G #############################
+#irun=`expr ${irun} + 1 `
+irun=1
+
+echo "IRUN=" ${irun}
+
+iter=${mychange_code}
+
+doutc3=${doutc}/${iter}
+doutc4=${doutc}/Merged_ch_${mychange_code}_${scen}_${model}
+doutc4s=${doutc4}/Namelists_saves
+mkdir -p ${doutc3} ${doutc4} ${doutc4s}
+dwkt=${doutc3}/tmp
+mkdir -p ${dwkt}
+
+cd ${dwkt}
+echo "in dwkt DIR=" ${dwkt}
+############
+
+\rm fort.4
+
+#cat << EOF > ${dwkt}/fort.4
+#\$namexp
+#pn=${ch0},${ch1},${ch2},${ch3},${ch4},${ch5},4*0.
+#zfac=${ifac[0]},${ifac[1]},${ifac[2]},${ifac[3]},${ifac[4]},${ifac[5]},4*1.
+#cvar='${culvar}'
+#ctype='${cultype}'
+#npcult=${npar}
+#/
+#EOF
+
+############# Petru set-up from Alg. Gen ###########
+cat << EOF > ${dwkt}/fort.4
+\$namexp
+pn=${pet1},${pet2},${pet3},${pet4},${pet5},${pet6},4*0.
+zfac=${lfac_petru}
+cvar='${culvar}'
+ctype='${cultype}'
+npcult=${npar}
+/
+EOF
+
+\rm read_${clexp}_local.F90 a.out input.txt
+ls -l ${mydaux}/read_${clexp}_new+factors.F90
+cp ${mydaux}/read_${clexp}_new+factors.F90 read_${clexp}_local.F90
+ls -l  *
+cp ${mydaux}/${clexp}${vmod}.${sufix}_base input.txt
+gfortran read_${clexp}_local.F90
+./a.out
+\mv ${dwkt}/output.txt  ${d0}/${clexp}${vmod}.${sufix}_MC
+cp ${d0}/${clexp}${vmod}.${sufix}_MC ${d0}/${clexp}${vmod}.${sufix}
+
+echo "file=" ${d0}/${clexp}${vmod}.${sufix}
+ls -l ${d0}/${clexp}${vmod}.${sufix}
+
+cd ${d0}
+
+
+
+
+exeopt='A '${fax}' NA'
+#echo "exeopt=" ${exeopt}
+#./dscsm048 ${exeopt} 1>${doutc2}/o1_${yy} \
+
+### noprint: 
+./dscm048_fin_teste_14apr2022 ${exeopt}  1>${doutc3}/o1_${yy} \
+                     2>${doutc3}/o2
+
+/usr/bin/sed -e "1,21d"  < ${doutc3}/o1_${yy} > ${doutc3}/o1_${yy}.txt
+
+
+\rm ${doutc3}/inforun
+cat << EOF > ${doutc3}/inforun
+'  '
+year; ${yy} scen: ${scen} model: ${model} iter: ${pet1} ${pet2} ${pet3} ${pet4} ${pet5} ${pet6}
+EOF
+
+\rm ${doutc3}/Info
+cat ${doutc3}/inforun ${doutc3}/o1_${yy}.txt > ${doutc3}/Info
+#if [ ${irun} -eq 1 ] && [ ${ch0} -eq ${valmat[0,0]} ; then
+if [ ${irun} -eq 1 ] ; then
+cp ${doutc3}/Info ${doutc4}/Info_all_IDEOTYPE
+echo "FIRST case !"
+ls -l ${doutc4}/Info_all_IDEOTYPE
+sed -e '/^  Crop/d'<  ${doutc4}/Info_all_IDEOTYPE > ${doutc4}/Info_all_IDEOTYPE_miss1
+sed -e '/^Crop/d'  < ${doutc4}/Info_all_IDEOTYPE_miss1 > ${doutc4}/Info_all_IDEOTYPE_miss2
+#### remove the first empty line (was a "Crop failure..." )
+sed -e '/^$/d' < ${doutc4}/Info_all_IDEOTYPE_miss2 > ${doutc4}/Info_all_IDEOTYPE_miss
+mv ${doutc4}/Info_all_IDEOTYPE_miss ${doutc4}/Info_all_IDEOTYPE
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss1
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss2
+else 
+cat ${doutc4}/Info_all_IDEOTYPE ${doutc3}/Info > ${doutc4}/Info_all_IDEOTYPE_tmp
+mv ${doutc4}/Info_all_IDEOTYPE_tmp ${doutc4}/Info_all_IDEOTYPE
+#sed -e "1,\$s/Crop/-9999/g" < ${doutc4}/Info_all_IDEOTYPE_YEAR_1976 > ${doutc4}/Info_all_IDEOTYPE_YEAR_1976_miss1
+#sed -e '/-9999/c\-9999 -9999 -9999 -99 -99 -99  -99 -99 -99 -99 -99 -99 -99 -99 -99 ' < \
+#          ${doutc4}/Info_all_IDEOTYPE_YEAR_1976_miss1 > \
+#          ${doutc4}/Info_all_IDEOTYPE_YEAR_1976_miss
+
+
+### remove Failures ..
+sed -e '/^  Crop/d'<  ${doutc4}/Info_all_IDEOTYPE > ${doutc4}/Info_all_IDEOTYPE_miss1
+sed -e '/^Crop/d'  < ${doutc4}/Info_all_IDEOTYPE_miss1 > ${doutc4}/Info_all_IDEOTYPE_miss2
+#### remove the first empty line (was a "Crop failure..." )
+sed -e '/^$/d' < ${doutc4}/Info_all_IDEOTYPE_miss2 > ${doutc4}/Info_all_IDEOTYPE_miss
+mv ${doutc4}/Info_all_IDEOTYPE_miss ${doutc4}/Info_all_IDEOTYPE_YEAR_${yy}_miss
+###################
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss1
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss2
+ls -l ${doutc4}/Info_all_IDEOTYPE_miss
+
+fi
+
+ 
+\rm *.OUT 
+#mv ${d0}/${clexp}${vmod}.${sufix} ${doutc4s}/${clexp}${vmod}.${sufix}_${cltest}_${iter}
+cp ${d0}/${clexp}${vmod}.${sufix} ${doutc4s}/${clexp}${vmod}.${sufix}_${cltest}_${mychange_code}
+
+#mv *.OUT ${doutc2}
+#mv ${d0}/${clexp}${vmod}.${sufix} ${doutc2}/${clexp}${vmod}.${sufix}_${cltest}_${mychange_code}
+#mv ${fax} ${doutc2}
+
+#echo "done: P,G loops and runs" 
+#echo "#############################"
+######################################################
+#mv ${doutc4}/Info_all_IDEOTYPE_miss ${doutc4}/Info_all_IDEOTYPE_YEAR_${yy}_miss
+
+  done
+echo "DONE, culture type=" ${ccul}
+
+else
+##### Petru case: usecodes=0 ###################
+cultype='PIO 3475*       '
+ccul='I0031_PIOs_3475'
+culvar='IB0031'
+doutc=${dout}/Test_MC/${ccul}
+mkdir -p ${doutc}
+doutc3=${doutc}/${mychange_code}
+doutc4=${doutc}/Merged_change_${mychange_code}_${scen}_${model}
+doutc4s=${doutc4}/Namelists_saves
+mkdir -p ${doutc3} ${doutc4} ${doutc4s}
+dwkt=${doutc3}/tmp
+mkdir -p ${dwkt}
+#################################################################################
+############################### aici PUI MZCER at tau, modificat dupa metoda ta, in fisierul
+## cu numele: ${clexp}${vmod}.${sufix}=MZCER048.CUL
+
+################################
+
+cd ${d0}
+echo "COPIEZ MZCER"
+ls -l MZCER*
+#cp ${mydaux}/MZCER048.CUL_orig ${d0}/MZCER048.CUL
+echo "FOR MZCER in DIR=" ${PWD}
+
+exeopt='A '${fax}' NA'
+./dscm048_fin_teste_14apr2022 ${exeopt}  1>${doutc3}/o1_${yy} \
+                     2>${doutc3}/o2
+/usr/bin/sed -e "1,21d"  < ${doutc3}/o1_${yy} > ${doutc3}/o1_${yy}.txt
+
+echo "out in " ${doutc3}/o1_${yy}.txt
+
+rm ${doutc3}/inforun
+cat << EOF > ${doutc3}/inforun
+'  '
+year; ${yy} scen: ${scen} model: ${model} iter: ${pet1} ${pet2} ${pet3} ${pet4} ${pet5} ${pet6}
+EOF
+
+\rm ${doutc3}/Info
+cat ${doutc3}/inforun ${doutc3}/o1_${yy}.txt > ${doutc3}/Info
+
+### remove Failures ..
+sed -e '/^  Crop/d'<  ${doutc3}/Info > ${doutc4}/Info_all_IDEOTYPE_miss1
+sed -e '/^Crop/d'  < ${doutc4}/Info_all_IDEOTYPE_miss1 > ${doutc4}/Info_all_IDEOTYPE_miss2
+#### remove the first empty line (was a "Crop failure..." )
+sed -e '/^$/d' < ${doutc4}/Info_all_IDEOTYPE_miss2 > ${doutc4}/Info_all_IDEOTYPE_miss
+
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss1
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss2
+ls -l ${doutc4}/Info_all_IDEOTYPE_miss
+
+
+\rm *.OUT 
+mv ${d0}/${clexp}${vmod}.${sufix} ${doutc4s}/${clexp}${vmod}.${sufix}_${cltest}_${myiter}
+
+
+# end if [ ${usecodes} -ne 0 ] 
+fi
+
+
+echo "###################"
+echo "Results in:" ${doutc4}
+################################################################
+
+
+#mv ${d0}/${fax} ${dout}/${fax}_Y${yy}
+cp ${d0}/${fax} ${dout}/${fax}_Y${yy}
+echo "DONE, year loop=" ${yy}
+yy=`expr ${yy} + 1 `
+\rm -rf ${doutc}/ch* 
+done
+
+echo "DONE, model=" ${model}
+done
+
+#########################################################################
+
