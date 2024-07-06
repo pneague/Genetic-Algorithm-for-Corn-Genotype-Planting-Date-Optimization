@@ -1,0 +1,568 @@
+#!/bin/sh
+dbase='EURO-CORDEX'
+list_models='CNRM-CERFACS-CNRM-CM5'
+#######################################################################################
+ipart=1
+echo "0:PART=" ${ipart}
+list_exp='rcp45'
+
+# dirplerel=
+# dauxil=
+#########################################################################################
+#########################################################################################
+#
+radfac=0.0864
+# 
+
+type='dd'
+### freq in days
+freq=1
+loc='Fundulea'
+loc1='ro'
+box='26.50,26.6,44.45,44.5'
+lon0=26.55
+lat0=44.48
+alt0=66.
+
+
+listvar=' rsds pr tasmin tasmax'
+itd=1 # compute td for 0: itd=0
+itrans=0
+resol='EUR-11'
+listvar_input_DSSAT=' rsds tasmax tasmin pr '
+
+echo "itd=" ${itd}
+
+cdo=${mycdo}
+##########################################################
+# 1: Prel. for units, format_test
+##########################################################
+#regmod=${creg}-${mreg}
+echo "list_exp=" ${list_exp}
+echo "list_models=" ${list_models}
+
+case ${type} in \
+  mm) namel=nam_extract_daythly;sdr=Monthly;;
+  sd) namel=nam_extract_subday;sdr=Subdaily;;
+  dd) namel=nam_extract_subday;sdr=Daily;;
+esac
+
+################## locations: 
+
+out00=${dirprel}/PREPCLIM_models
+daux=${dauxil}
+
+out00_new_out=${dirprel}/PREPCLIM_models
+
+mkdir -p ${daux}
+#######################################
+if [ ${ipart} -eq 1 ] ; then
+echo "1:PART=" ${ipart}
+
+for exp in ${list_exp} ; do
+case ${exp} in \
+  historical) slice00='1976-01-01,2005-12-31' ; ysrad=1976; clexp=HIST;;
+  rcp45 ) slice00='2006-01-01,2050-12-31' ; slice00_MOHC='2006-01-01,2099-12-31' ;ysrad=2006;clexp=RCP45;;
+  rcp45 ) slice00='2006-01-01,2050-12-31' ; slice00_MOHC='2006-01-01,2099-12-31' ;ysrad=2006;clexp=RCP85;;
+esac
+
+for model in ${list_models} ; do
+cmod=`expr ${model} | cut -c1-12 `
+case ${model} in \
+   CNRM-CERFACS-CNRM-CM5) regmod='KNMI-RACMO22E' ;;
+   NCC-NorESM1-M) regmod='GERICS-REMO2015' ;;
+esac
+
+slice0=${slice00}
+case ${model} in \
+ MOHC-HadGEM2-ES) slice0=${slice00_MOHC}
+esac
+echo "SLICE0=" ${slice0}
+
+##### no of days ########################
+datsta=`expr ${slice0} | cut -c1-10`
+datend=`expr ${slice0} | cut -c12-21`
+
+start_ts=$(date -d "${datsta}" '+%s')
+end_ts=$(date -d "${datend} +1 day" '+%s')
+ndayx=$(( ( end_ts - start_ts + 1 )/(60*60*24) ))
+echo "start=" ${start_ts}
+echo "end=" ${end_ts}
+echo "ndayx=" ${ndayx}
+
+csl01=`expr ${slice0} | cut -c1-4 `
+csl02=`expr ${slice0} | cut -c12-15 `
+cslout0=${csl01}-${csl02}
+cm01=`expr ${slice0} | cut -c6-7 `
+cm02=`expr ${slice0} | cut -c17-18 `
+cd01=`expr ${slice0} | cut -c9-10 `
+cd02=`expr ${slice0} | cut -c20-21 `
+
+echo "csl01=" $csl01 "csl02=" $csl02
+echo "cm01=" $cm01 "cm02=" $cm02 "cd01=" $cd01 "cd02=" $cd02
+
+########## adjust ndayx for model with different calendar !!! #####
+if [[ "$model" = "IPSL-IPSL-CM5A-MR" ]] ; then
+echo "ADJUST ndayx: model=" ${model}
+
+if [ "$cm01" = "01" ] &&  [ "$cm02" = "12" ] ; then
+
+nr41=`expr ${csl02} - ${csl01} + 1 `
+nr42=`expr ${nr41} \/ 4 `
+rest=`expr ${nr41} - ${nr42} \* 4 `
+echo "REST=" ${rest}
+
+if [ ${rest} -eq 0 ] ; then
+nr4=${nr42}
+#
+elif [ ${rest} -eq 1 ] ; then
+lyy1=`expr ${csl02}`
+restl1=`expr ${lyy1} - ${lyy1} \/ 4 \* 4 `
+if [ ${restl1} -eq 0 ] ; then
+nr4=`expr ${nr42} + 1 `
+fi
+#
+elif [ ${rest} -eq 2 ] ; then
+lyy1=`expr ${csl02}`
+restl1=`expr ${lyy1} - ${lyy1} \/ 4 \* 4 `
+lyy2=`expr ${csl02} - 1`
+restl2=`expr ${lyy2} - ${lyy2} \/ 4 \* 4 `
+if [ ${restl1} -eq 0 ]  || [ ${restl2} -eq 0 ]  ; then
+nr4=`expr ${nr42} + 1 `
+fi
+#
+elif [ ${rest} -eq 3 ] ; then
+lyy1=`expr ${csl02}`
+restl1=`expr ${lyy1} - ${lyy1} \/ 4 \* 4 `
+echo "REST_l1=" ${restl1}
+lyy2=`expr ${csl02} - 1 `
+restl2=`expr ${lyy2} - ${lyy2} \/ 4 \* 4 `
+echo "REST_l2=" ${restl2}
+lyy3=`expr ${csl02} - 2 `
+restl3=`expr ${lyy3} - ${lyy3} \/ 4 \* 4 `
+echo "REST_l3=" ${restl3}
+if [ ${restl1} -eq 0 ]  || [ ${restl2} -eq 0 ]  || [ ${restl3} -eq 0 ]  ; then
+nr4=`expr ${nr42} + 1 `
+fi
+#
+fi
+#
+ndayx=`expr ${ndayx} - ${nr4} `
+echo "nr4=" ${nr4}
+echo "ndayx=" ${ndayx}
+
+echo "IPSL: ndayx_before_2100=" ${ndayx}
+if [ ${csl02} -ge 2100 ] && [ ${cm02} -gt 2 ] ; then
+ndayx=`expr ${ndayx} + 1 `
+echo "ndayx_after_2100=" ${ndayx}
+fi
+if [ ${csl01} -le 1900 ] && [ ${cm01} -le 2 ] ; then
+ndayx=`expr ${ndayx} + 1 `
+echo "ndayx_before_1900=" ${ndayx}
+fi
+############
+r1=`expr $csl01 - $csl01 \/ 4 \* 4 `
+echo "R1=" $r1
+elif [ $cm01 -gt 2 ] &&  [ $r1 -eq 0 ] ; then
+  ndayx=`expr ${ndayx} - 1 `
+fi
+
+# end if IPSL:
+echo "ndayx_IPSL=" ${ndayx}
+fi
+
+###########################
+if [[ "$model" = "MOHC-HadGEM2-ES" ]] ; then
+echo "ADJUST ndayx: model=" ${model} ${csl02} ${csl01}
+nr41=`expr ${csl02} - ${csl01} + 1 `
+ndayx0=`expr ${nr41} \* 12 \* 30 `
+echo "ndayx0=" ${ndayx0}
+
+if [ "$cm01" = "01" ] &&  [ "$cm02" = "12" ] && [ "$cd01" = "01" ] && [ "$cd02" = "31" ] ; then
+ndayx=${ndayx0}
+elif [ "$cm01" = "01" ] &&  [ "$cm02" = "12" ] ; then
+echo " case: Not full months, MOHC: calc sh1, sh2"
+shd2=`expr 30 - ${cd02} `
+ndayx=`expr ${ndayx0} - ${shd2}`
+shd1=`expr ${cd01} - 1 `
+ndayx=`expr ${ndayx} - ${shd1} `
+else
+echo " case: Not full years (and poss.not full months), MOHC"
+shm1=`expr  $cm01 - 1 `
+shm2=`expr  12 - $cm02 `
+ndayx=`expr ${ndayx0} - ${shm1} \* 30 - ${cd01} + 1 - ${shm2} \* 30 - 30 + ${cd02} `
+fi
+echo "ndayx_MOHC=" ${ndayx}
+fi
+#############################################
+echo "ndayx=" ${ndayx}
+#############################################
+
+for var in ${listvar} ; do
+out0=${out00}/${model}-${regmod}/${exp}/${var}/Remap/REG_RO
+#out00='/run/media/mcaian/2c7237df-c055-4aef-ac25-e54f9577610d/Prepclim/PREPCLIM_rest_modele/2modele_nocorr'
+#/'${model}-${regmod}/historical/hurs/Remap/REG_RO'
+
+#  rsds) out0=${out00}/${exp}/${var}_new/${loc}/${model}-${regmod};;
+case ${var} in \
+  rsds) out0=${out00}/${model}-${regmod}/${exp}/${var}/Remap/REG_RO ;;
+esac
+
+out0_n="${out00_new_out}"/${model}-${regmod}/${exp}/Prel_models
+out00_n="${out0_n}"/PREP_DSSAT
+mkdir -p "${out0_n}" "${out00_n}"
+
+cd "${out0_n}"
+echo "PWD=" "${PWD}"
+
+\rm "${out0_n}"/list_reg_${var} "${out0_n}"/merged_${var}*
+ls "${out0}"/${var}*${resol}*${model}*${exp}*${regmod}*${loc1} > "${out0_n}"/list_reg_${var}
+$cdo mergetime $(cat list_reg_${var}) "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc1}.nc
+$cdo -R -f nc copy "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc1}.nc \
+                "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc1}.nc2
+
+echo "LIST on  DISK:"
+
+
+ls -l  "${out0}"/${var}*${resol}*${model}*${exp}*${regmod}*${loc1}
+
+exit
+cdo sellonlatbox,${box} "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc1}.nc2 \
+                 "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc}.nc2
+
+\rm "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc1}*
+
+$cdo setcalendar,standard "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc}.nc2 \
+                          "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc}.nc.nc2
+\rm "${out0_n}"/merged_${var}_${exp}_${model}_${regmod}_${loc}.nc2
+echo "done var=" ${var}
+done
+
+
+#fa=merged_${var}_${exp}_${model}_${regmod}_${loc}.nc
+###########################
+# out0_n e functie de variabila !!
+
+listvar1=${listvar}
+listvar_input_DSSAT1=${listvar_input_DSSAT}
+
+if [ ${itd} -eq 0 ] ; then
+echo "itd=" ${itd}
+out0_n_td="${out00_n}"/${exp}/td/${loc}/${model}-${regmod}
+out0_n_tas="${out00_n}"/${exp}/tas/${loc}/${model}-${regmod}
+out0_n_hurs="${out00_n}"/${exp}/hurs/${loc}/${model}-${regmod}
+ls -l "${out0_n_tas}"/merged_tas_${exp}_${model}_${regmod}_${loc}.nc.nc2
+ls -l "${out0_n_hurs}"/merged_hurs_${exp}_${model}_${regmod}_${loc}.nc.nc2
+
+if [ -f "${out0_n_tas}"/merged_tas_${exp}_${model}_${regmod}_${loc}.nc.nc2 ] ; then
+echo "found tas File !"
+if [ -f "${out0_n_hurs}"/merged_hurs_${exp}_${model}_${regmod}_${loc}.nc.nc2 ]; then
+echo "found hurs File !"
+echo "files for td are here "
+#Td = T - ((100 - RH)/5.)  (T in C deg)
+\rm td_tmp* mer*_Cdeg
+mkdir -p "${out0_n_td}" 
+\rm "${out0_n_td}"/merged_td_${exp}_${model}_${regmod}_${loc}.nc.nc2
+
+$cdo  subc,273.15 "${out0_n_tas}"/merged_tas_${exp}_${model}_${regmod}_${loc}.nc.nc2 \
+      "${out0_n_tas}"/merged_tas_${exp}_${model}_${regmod}_${loc}.nc_Cdeg
+$cdo  subc,100.  "${out0_n_hurs}"/merged_hurs_${exp}_${model}_${regmod}_${loc}.nc.nc2 \
+          "${out0_n_hurs}"/td_tmp1.nc
+$cdo  divc,5.  "${out0_n_hurs}"/td_tmp1.nc  \
+               "${out0_n_hurs}"/td_tmp2.nc
+$cdo  add  "${out0_n_tas}"/merged_tas_${exp}_${model}_${regmod}_${loc}.nc_Cdeg \
+           "${out0_n_hurs}"/td_tmp2.nc \
+           "${out0_n_td}"/merged_td_${exp}_${model}_${regmod}_${loc}.nc.nc2
+\rm "${out0_n_hurs}"/td_tmp*
+\rm "${out0_n_tas}"/merged_tas_${exp}_${model}_${regmod}_${loc}.nc_Cdeg
+#
+listvar1=${listvar}\ 'td'
+listvar_input_DSSAT1=${listvar_input_DSSAT}\ 'td'
+#
+else  echo "WARNING: Not found file hurs"
+fi
+else  echo "WARNING: Not found file tas"
+fi
+echo "listvar1=" ${listvar1}
+echo "listvar_input_DSSAT1=" ${listvar_input_DSSAT1}
+
+fi
+###########################
+for var in ${listvar1} ; do
+out0_n=${out00}/${model}-${regmod}/${exp}/Prel_models
+
+ls -l ${out0_n}
+echo "AM LISTAT 1"
+
+moutxt="${out0_n}"/TXT_RAD
+mkdir -p "${moutxt}"
+moutxtyy="${moutxt}"/YY_tmp
+rm -rf "${moutxtyy}"
+mkdir -p "${moutxtyy}" 
+
+fadd=0.
+fmul=1.
+case ${var} in \
+  rsds)      varo=srad;fadd=0.;fmul=${radfac};;
+  tasmax)  varo=tmax;fadd=-273.15;fmul=1.;;
+  tasmin)  varo=tmin;fadd=-273.15;fmul=1.;;
+  pr)      varo=rain;fadd=0.;fmul=86400.;;
+  w10)     varo=wind;fadd=0.;fmul=1.;;
+  par)     varo=par;fadd=0.;fmul=1.;;
+  evap)    varo=evap;fadd=0.;fmul=1.;;
+  hurs)    varo=rhum;fadd=0.;fmul=1.;;
+  td)      varo=dewp;fadd=0.;fmul=1.;;
+esac
+echo "add:" ${fadd} "mul:" ${fmul}
+
+fa=merged_${var}_${exp}_${model}_${regmod}_${loc}.nc
+
+case ${var} in \
+  rsds)   rm "${out0_n}"/${fa} ;  cdo mulc,${fmul} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+  pr)     rm "${out0_n}"/${fa} ;  cdo mulc,${fmul} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+  tas)    rm "${out0_n}"/${fa} ;  cdo addc,${fadd} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+  tasmin) rm "${out0_n}"/${fa} ;  cdo addc,${fadd} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+  tasmax) rm "${out0_n}"/${fa} ;  cdo addc,${fadd} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+  td)     rm "${out0_n}"/${fa} ;  cdo addc,${fadd} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+  hurs)   rm "${out0_n}"/${fa} ;  cdo addc,${fadd} "${out0_n}"/${fa}.nc2 "${out0_n}"/${fa} ;;
+esac
+
+ls -l "${out0_n}"
+echo "AM LISTAT 2"
+
+#
+\rm "${out0_n}"/${fa}_add
+\rm "${moutxtyy}"/yy_
+$cdo splityear "${out0_n}"/${fa} \
+               "${moutxtyy}"/yy_
+yy=${csl01}
+while [ ${yy} -le ${csl02} ] ; do
+$cdo output "${moutxtyy}"/yy_${yy}.nc > \
+    "${moutxt}"/merged_${var}_${exp}_${model}+${regmod}_${loc}_${yy}.txt
+yy=`expr ${yy} + 1 `
+done
+
+echo "Done, var=" ${var}
+done
+
+###########################
+echo "done model=" ${model}
+done
+
+echo "Done, exp=" ${exp}
+done
+
+echo "############  Done, Part1 - all models, all exp ######################"
+
+# end if ipart=1
+fi
+######################################################
+# 2: Prel for: Input_DSSAT
+######################################################
+
+echo "2:PART=" ${ipart}
+#all vars done & available
+#cd ${moutxt}/Preproc
+#############################
+for exp in ${list_exp} ; do
+
+case ${exp} in \
+  historical) slice00='1976-01-01,2005-12-31' ; ysrad=1976; clexp=HIST;;
+  rcp45 ) slice00='2006-01-01,2050-12-31' ; slice00_MOHC='2006-01-01,2099-12-31' ;ysrad=2006;clexp=RCP45;;
+  rcp85 ) slice00='2006-01-01,2050-12-31' ; slice00_MOHC='2006-01-01,2099-12-31' ;ysrad=2006;clexp=RCP85;;
+esac
+
+for model in ${list_models} ; do
+cmod=`expr ${model} | cut -c1-12 `
+case ${model} in \
+   CNRM-CERFACS-CNRM-CM5) regmod='KNMI-RACMO22E' ;;
+   NCC-NorESM1-M) regmod='GERICS-REMO2015' ;;
+esac
+slice0=${slice00}
+case ${model} in \
+ MOHC-HadGEM2-ES) slice0=${slice00_MOHC} ;;
+esac
+csl01=`expr ${slice0} | cut -c1-4 `
+csl02=`expr ${slice0} | cut -c12-15 `
+cm01=`expr ${slice0} | cut -c6-7 `
+cm02=`expr ${slice0} | cut -c17-18 `
+cd01=`expr ${slice0} | cut -c9-10 `
+cd02=`expr ${slice0} | cut -c20-21 `
+
+echo "slice0=" ${slice0}
+echo "cls01=" ${csl01}
+echo "cls02=" ${csl02}
+
+case ${exp} in \
+  historical) ys=${csl01}; ye=${csl02};;
+  rcp45)      ys=${csl01}; ye=${csl02};;
+  rcp85)      ys=${csl01}; ye=${csl02};;
+  evaluation) ys=${csl01}; ye=${csl02};;
+esac
+echo "csl=" $csl01 $csl02
+
+out0_n="${out00}"/${model}-${regmod}/${exp}/Prel_2models_MORE_Fundulea
+out00_n="${out0_n}"/PREP_DSSAT
+moutxtprep="${out00_n}"/Preproc
+rez="${out00_n}"/Input_DSSAT
+mkdir -p "${moutxtprep}" "${rez}"
+\rm -rf "${moutxtprep}"/* "${rez}"/*
+
+cd "${moutxtprep}"
+
+yy=${ys}
+#yy=${ysrad}
+
+echo "yy=" ${yy}
+echo "ye=" ${ye}
+
+
+while [ ${yy} -le ${ye} ] ; do
+\rm fa_*
+
+##### no of days in the year yy  ########################
+cm0yy=1
+cm1yy=12
+if [ ${yy} -eq ${ys} ] ; then
+datsta_yy=`expr ${slice0} | cut -c1-10`
+datend_yy=${yy}-12-31
+cm0yy=${cm01}
+elif [ ${yy} -eq ${ye} ] ; then
+datsta_yy=${yy}-01-01
+datend_yy=`expr ${slice0} | cut -c12-21`
+cm1yy=${cm02}
+else
+datsta_yy=${yy}-01-01
+datend_yy=${yy}-12-31
+fi
+
+start_ts_yy=$(date -d "${datsta_yy}" '+%s')
+echo "dats: " ${start_ts_yy}
+end_ts_yy=$(date -d "${datend_yy} +1 day" '+%s')
+echo "date: " ${end_ts_yy}
+ndayx_yy=$(( ( end_ts_yy - start_ts_yy + 1 )/(60*60*24) ))
+echo "ndayx_YY=" ${ndayx_yy}
+
+###  adjustments per model:
+########## adjust ndayx for model with different calendar !!! #####
+if [ "$model" = "IPSL-IPSL-CM5A-MR" ] && [ ${cm0yy} -le 2 ]  && [ ${cm1yy} -ge 2 ] ; then
+echo "ADJUST ndayx: model=" ${model}
+yyp4=`expr ${yy} \/ 4 `
+rest=`expr ${yy} - ${yyp4} \* 4 `
+if [ ${rest} -eq 0 ] ; then
+ndayx_yy=`expr ${ndayx_yy} - 1 `
+fi
+
+if [ ${yy} -eq 2100 ] || [ ${yy} -eq 1900 ] ; then
+if [ ${cm0yy} -le 2 ] && [ ${cm1yy} -ge 2 ] ; then
+ndayx_yy=`expr ${ndayx_yy} + 1 `
+echo "IPSL_CORR: ndayx_in_2100=" ${ndayx_yy}
+fi
+fi
+
+echo "ndayx_yy_IPSL=" ${ndayx_yy}
+fi
+###########################
+###########################
+if [[ "$model" = "MOHC-HadGEM2-ES" ]] ; then
+if [ $yy -eq $ys ] ; then
+nmmo=`expr 12 - $cm01 `
+ndmo=$cd01
+ndayx_yy=`expr 30 \* $nmmo + 30 - ${ndmo} + 1 `
+elif [ $yy -eq $ye ] ; then
+nmmo=`expr $cm02 - 1 `
+ndmo=$cd02
+if [ ${ndmo} -eq 31 ] ; then
+ndmo=30
+echo "CORR 31 days for MOHC, Last year"
+fi
+#
+ndayx_yy=`expr 30 \* $nmmo + ${ndmo} `
+else
+ndayx_yy=`expr 30 \* 12 `
+fi
+echo "YEAR=" ${yy} "ndayx_YY_MOHC=" ${ndayx_yy}
+fi
+
+#####################################################################
+listvar1=${listvar}
+listvar_input_DSSAT1=${listvar_input_DSSAT}
+
+echo ${listvar_input_DSSAT1}
+
+for var in ${listvar_input_DSSAT1} ; do
+echo "VAR_DASST=" ${var}
+case ${var} in \
+  rsds)    varo=srad;fadd=0.;fmul=${radfac};;
+  tasmax)  varo=tmax;fadd=273.15;fmul=1.;;
+  tasmin)  varo=tmin;fadd=273.15;fmul=1.;;
+  pr)      varo=rain;fadd=0.;fmul=86400.;;
+  w10)     varo=wind;fadd=0.;fmul=1.;;
+  par)     varo=par;fadd=0.;fmul=1.;;
+  evap)    varo=evap;fadd=0.;fmul=1.;;
+  hurs)    varo=rhum;fadd=0.;fmul=1.;;
+  td)      varo=dewp;fadd=0.;fmul=1.;;
+esac
+#out0_n="${out00_n}"/${exp}/${var}/${loc}/${model}-${regmod}
+out0_n="${out00}"/${model}-${regmod}/${exp}/Prel_2models_MORE_Fundulea
+#moutxt="${out0_n}"/TXT
+moutxt="${out0_n}"/TXT_RAD
+
+fain="${moutxt}"/merged_${var}_${exp}_${model}+${regmod}_${loc}_${yy}.txt
+echo "VAR=" ${var} "FAIN=" ${fain} "MOUTXT=" "${moutxt}"
+echo "in DIR=" ${PWD}
+ls -l fa_*
+
+cp ${fain} fa_${varo}
+ls -l ${fain}
+echo "moutxt=" "${moutxt}"  "PWD=" ${PWD}
+done
+
+
+##################
+\rm "${moutxt}"/namelist_descr*.txt
+cat << EOF > namelist_descr_${var}_${yy}.txt 
+\$namexp
+ exper='${exp}',
+ clexper='${clexp}',
+ ys=${yy},
+ ye=${yy},
+ ms=01,
+ me=12,
+ ds=01,
+ de=31,
+ ndx=${ndayx_yy}, 
+ freq=${freq},
+ loclon=${lon0},
+ loclat=${lat0},
+ locelev=${alt0}
+/
+EOF
+cp namelist_descr_${var}_${yy}.txt namelist_descr.txt
+
+#cd ${moutxt}
+\rm a.out read_4_DSSAT.F90 
+
+cp ${daux}/read_pr_tasmax_tasmin_DSSAT_${cmod}.F90 \
+           read_4_DSSAT.F90
+
+gfortran read_4_DSSAT.F90
+
+./a.out
+
+cp faout.txt "${rez}"/${clexp}${yy}01.WTH
+echo "done, year=" ${yy}
+yy=`expr ${yy} + 1 `
+
+echo "REZ in: " "${rez}"/${clexp}${yy}01.WTH
+done
+
+echo "############  Done, Part2 - model= " ${model} "all exp #######"
+echo "done, model=" ${model}
+done
+#########
+echo "done, exp=" ${exp}
+done
+##########################################################################
+##########################################################################
+##########################################################################
