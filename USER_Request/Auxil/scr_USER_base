@@ -1,0 +1,681 @@
+
+
+################################
+################################
+kode=576133 # default code for deterministinc genotype optimisation
+echo " genotype optimisation option IDT(1 if true)=" ${IDT}
+#################################
+if [ ${ferdap} -eq 0 ] ; then
+fermass=0
+fi
+if [ ${irdayn} -eq 0 ] ; then
+irmass=0
+fi
+################################
+part=1 # case 2021-2050 scenarios ; part=2: case 2070-2099 scenarios
+
+###### 0. Set-up ###############
+############ soil: ##############
+def_managfert='1xN'
+def_soilfert='stdfert
+def_iniwater='+iniwater'
+
+soiltype=${def_managfert}_soil_${def_soilfert}${def_iniwater}
+
+######### genotype:class parameters ###
+clsensit='Genotype'
+clexp=MZCER
+vmod=048
+sufix=CUL
+cltest=PG
+# initialise PG change: #####
+npar=6
+nparm1=`expr ${npar} - 1 `
+ch0=0
+ch1=0
+ch2=0
+ch3=0
+ch4=0
+ch5=0
+
+# 576133
+if [ ${kode} -eq 576133 ] ; then
+nz=1890
+nint=378
+lstep=' 5   7    6   1  3  3'
+lmin='100  10  500 798  6 30'
+lmax='500 260 1500 798 12 70'
+lfac='  1   100    1   1  1  1'
+fi
+
+# 111111
+if [ ${IDT} -ne 1 ] ; then
+kode=111111
+lstep=' 1   1    1   1  1  1'
+lmin='200  200  700 798  9 40'
+lmax='200  200  700 798  9 40'
+lfac='  1   100    1   1  1  1'
+fi
+
+nrintmax=20
+nrparmax=20
+daypert=0
+###################
+
+#scen=${scen}
+
+for scen in historical ${uscen} ; do
+
+period=1
+echo "scen=" ${scen}
+###############
+#/home_DT4/WORK_RUNS_Prepclim/DSSAT_RUNS_Genotipare/USER_Runs/User_Run_rcp85
+#/home_DT4/WORK_RUNS_Prepclim/DSSAT_RUNS_Genotipare/USER_Runs/SCR_USER_REQ
+
+d000=./USER_RUNS_Crop_and_Genotype_optimisation/USER_Runs
+d00=${d00}/USER_Runs/User_Run_${scen}
+d0=${d000}/Data
+daux=./USER_Request/Auxil
+dout_link0=${d000}/Output_USER_Request
+#
+mkdir -p ${dout_link0}
+cd ${d0}
+
+datain0scen=${d000}/Data/DATE/Input_DSSAT
+
+#################### regionally dependent : soil FILE for the region ################
+#################### weather data source: WTH  FILE  ################
+ysu=`expr ${tsl} | cut -c1-4`
+yeu=`expr ${tsl} | cut -c6-9`
+
+echo "ysu=" ${ysu}
+echo "yeu=" ${yeu}
+
+faxtempl=FIFU9901.MZX_${soltype}
+fax=FIFU9901.MZX
+################ models, scenarios: #######
+
+for model in ICHEC-EC-EARTH-SMHI-RCA4 CNRM-CERFACS-CNRM-CM5-SMHI-RCA4 MPI-M-MPI-ESM-LR-SMHI-RCA4 ; do
+
+case ${model} in \
+  CNRM-CERFACS-CNRM-CM5-SMHI-RCA4) cmod='CNR';;
+  ICHEC-EC-EARTH-SMHI-RCA4) cmod='ECE';;
+  MPI-M-MPI-ESM-LR-SMHI-RCA4) cmod='MPI';;
+esac
+
+
+case ${scen} in \
+ Ctrl) clscen=MARS ;clscen4=MARS; datain0=${datain0scen}/${scen}/ERA;
+        if [ ${part} -eq 1 ] ; then
+         yst=`expr ${ysu} - 50 + 5 `
+         yen=`expr ${yeu} - 50 + 5 `
+        fi;;
+ historical) clscen=HIST ;clscen4=HIST;datain0=${datain0scen}/${scen}/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=`expr ${ysu} - 50 + 5 `
+         yen=` expr ${yeu} - 50 + 5 `
+        fi;;
+ rcp45) clscen=RCP45 ;clscen4=RCP4;datain0=${datain0scen}/${scen}/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=${ysu}
+         yen=${yeu}
+        else 
+         yst=2070
+         yen=2099
+        fi ;; 
+ rcp85) clscen=RCP85 ;clscen4=RCP8;datain0=${datain0scen}/${scen}/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=${ysu}
+         yen=${yeu}
+        else 
+         yst=2070
+         yen=2099
+        fi ;; 
+esac
+echo "datain0=" ${datain0}
+
+dexp00=${d000}/Output_USER_Request/RES_${userid}_${ukode}
+dexp0=${dexp00}/${scen}
+exp0=${dexp0}/${model}
+mkdir -p ${dexp00} ${dexp0} ${exp0}
+
+
+cd ${d0}
+################
+
+mkdir -p old_tmp
+mv ${clscen}*.WTH old_tmp
+mv ${clscen4}*.WTH old_tmp
+
+cp ${datain0}/${clscen}*.WTH .
+
+cp ${daux}/SOIL.SOL_${judet}  SOIL.SOL
+cp ${daux}/SOIL.SOL_${judet}  soil.sol
+
+####################### 1., 2.:  the 2 loops: #########################
+##############################################################
+
+####  LOOP 1. YEAR  loop ####### (make FIFU9901.MZX file) #############
+ys=${yst}
+ye=${yen}
+
+echo "ys=" ${ys}
+echo "ye=" ${ye}
+
+yy=${ys}
+
+while [ ${yy} -le ${ye} ] ; do
+echo "YY=" ${yy}
+echo "YYE=" ${ye}
+
+
+yy2t=`expr ${yy} | cut -c 3-4 `
+yy2=`expr ${yy2t} + 100 | cut -c 2-3 `
+echo "YEAR=" ${yy2}
+
+fawin=${clscen}${yy}01.WTH
+fawinl=${clscen4}${yy2}01.WTH
+mv ${fawin} ${fawinl}
+echo "fawin=" ${fawin}
+
+dout=${exp0}/YY_${yy}
+\rm -r ${dout}
+mkdir -p ${dout}
+
+\rm fin_tmp* ${fax}
+
+pld=` expr ${pldat} | cut -c1-2 ` 
+plm=` expr ${pldat} | cut -c3-4 `
+pld=`expr ${pld} + 100 | cut -c2-3 `
+plm=`expr ${plm} + 100 | cut -c2-3 `
+echo "pld=" ${pld} "plm=" ${plm}
+
+if [ ${plm} -eq 2 ] ; then
+plday1=`expr 31 + ${pld} `
+elif [ ${plm} -eq 3 ] ; then
+plday1=`expr 60 + ${pld} `
+elif [ ${plm} -eq 4 ] ; then
+plday1=`expr 90 + ${pld} `
+elif [ ${plm} -eq 5 ] ; then 
+plday1=`expr 120 + ${pld} `
+fi
+plday1=`expr ${plday1} + 1000 | cut -c2-4 `
+
+echo "plday1=" ${plday1} 
+
+#  user option as planting date is then perturbed 
+plday1o='091'
+plday2o='101'
+plday3o='120'
+plday4o='135'
+
+plday2=${plday2o}
+plday3=${plday3o}
+plday4=${plday4o}
+
+plday2=`expr ${plday2} + 1000 | cut -c2-4 `
+plday3=`expr ${plday3} + 1000 | cut -c2-4 `
+plday4=`expr ${plday4} + 1000 | cut -c2-4 `
+#
+if [ ${daypert} -eq 1 ] ; then
+# 3-day perturbation is applied
+plday2=`expr ${plday1} - 3 + 1000 | cut -c2-4 `
+plday3=`expr ${plday3} + 3 + 1000 | cut -c2-4 `
+plday4=`expr ${plday4} + 6 + 1000 | cut -c2-4 `
+fi
+
+echo "PLDAY_old=" ${plday1o} ${plday2o} ${plday3o} ${plday4o}
+echo "PLDAY_new=" ${plday1} ${plday2} ${plday3} ${plday4}
+########
+#ferday_cal=`expr ${plday1} + ${ferdap} `
+ferday=${ferdap}
+fermass2=`expr ${fermass} \* 2 `
+irday=` expr ${irdayn} + 1000 | cut -c2-4 `
+
+## harvest date
+/usr/bin/sed -e "1,\$s/1 95304/1 ${yy2}304/g" < ${daux}/${faxtempl} > fin_tmp1
+## irrigation date
+if [ ${irdayn} -ne 0 ] ; then
+/usr/bin/sed -e "1,\$s/1 95115/1 ${yy2}115/g" <  fin_tmp1 > fin_tmp2
+/usr/bin/sed -e "1,\$s/1 95115/1 ${yy2}${irday}/g" <  fin_tmp1 > fin_tmp2
+fi
+############### format write !!!!
+if [ ${irmass} -lt 10 ] ; then
+/usr/bin/sed -e "1,\$s/1 95115   -99   -99/1 ${yy2}${irday}   -99     ${irmass}/g" <  fin_tmp1 > fin_tmp2
+elif [ ${irmass} -lt 100 ] ; then
+/usr/bin/sed -e "1,\$s/1 95115   -99   -99/1 ${yy2}${irday}   -99    ${irmass}/g" <  fin_tmp1 > fin_tmp2
+else
+/usr/bin/sed -e "1,\$s/1 95115   -99   -99/1 ${yy2}${irday}   -99   ${irmass}/g" <  fin_tmp1 > fin_tmp2
+fi
+
+## planting date date
+/usr/bin/sed -e "1,\$s/1 95${plday1o}/1 ${yy2}${plday1}/g" <  fin_tmp2 > fin_tmp3
+/usr/bin/sed -e "1,\$s/2 95${plday2o}/2 ${yy2}${plday2}/g" <  fin_tmp3 > fin_tmp4
+/usr/bin/sed -e "1,\$s/3 95${plday3o}/3 ${yy2}${plday3}/g" <  fin_tmp4 > fin_tmp5
+/usr/bin/sed -e "1,\$s/4 95${plday4o}/4 ${yy2}${plday4}/g" <  fin_tmp5 > fin_tmp6
+# harvest last
+/usr/bin/sed -e "1,\$s/95334/${yy2}334/g" <  fin_tmp6 > fin_tmp7
+# Wather file scen
+/usr/bin/sed -e "1,\$s/MARS/${clscen4}/g" <  fin_tmp7 > fin_tmp8
+############### format write !!!!
+if [ ${fermass} -lt 10 ] ; then
+/usr/bin/sed -e "1,\$s/\ 23/\  ${fermass}/g" <  fin_tmp8 > fin_tmp9
+elif [ ${fermass} -lt 100 ] ; then
+/usr/bin/sed -e "1,\$s/\ 23/\ ${fermass}/g" <  fin_tmp8 > fin_tmp9
+else
+/usr/bin/sed -e "1,\$s/\ 23/${fermass}/g" <  fin_tmp8 > fin_tmp9
+fi
+
+############### format write !!!!
+if [ ${fermass2} -lt 10 ] ; then
+/usr/bin/sed -e "1,\$s/\ 46/\  ${fermass2}/g" <  fin_tmp9 > fin_tmp10
+elif [ ${fermass2} -lt 100 ] ; then
+/usr/bin/sed -e "1,\$s/\ 46/\ ${fermass2}/g" <  fin_tmp9 > fin_tmp10
+else
+/usr/bin/sed -e "1,\$s/\ 46/${fermass2}/g" <  fin_tmp9 > fin_tmp10
+fi
+
+if [ ${ferday} -lt 10 ] ; then
+/usr/bin/sed -e "1,\$s/\ 14\ FE/\  ${ferday}\ FE/g" <  fin_tmp10 > fin_tmp11
+elif [ ${ferday} -lt 100 ] ; then
+/usr/bin/sed -e "1,\$s/\ 14\ FE/\ ${ferday}\ FE/g" <  fin_tmp10 > fin_tmp11
+else
+/usr/bin/sed -e "1,\$s/\ 14\ FE/${ferday}\ FE/g" <  fin_tmp10 > fin_tmp11
+fi
+## start   date date
+/usr/bin/sed -e "1,\$s/GE              1     1     S 95001/GE              ${period}     1     S ${yy2}001/g" <  fin_tmp11 > ${fax}
+
+# a plday loop possible ends here: echo " day loop, pday=' ${plday}
+#done
+#\rm fin_tmp*
+
+echo "FAX file in" ${d0}/${fax}
+##### +++ #################### add options: irmass; ferday; fermass; 
+#fawinl=${clscen4}${yy2}01.WTH
+###############################
+
+####  LOOP 2. GENOTYPE loop (make MZCER.CUL file) #######
+
+#possible Loop for cultype, user-requested: 
+
+for cultype in  'PIO 3475*       '  ; do
+
+echo "cultype=" ${cultype}
+
+case ${cultype} in \
+ 'PIO 3541        ') ccul='I0029_PIO_3541';culvar='IB0029';;
+ 'PIO 3707        ') ccul='I0030_PIO_3707';culvar='IB0030';;
+ 'PIO 3475*       ') ccul='I0031_PIOs_3475';culvar='IB0031';;
+ 'PIO 3382*       ') ccul='I0032_PIOs_3382';culvar='IB0032';;
+ 'PIO 3780        ') ccul='I0033_PIO_3780';culvar='IB0033';;
+ 'PIO 3780*       ') ccul='I0034_PIOs_3780';culvar='IB0034';;
+ 'PIO 3165        ') ccul='I0066_PIO_3324';culvar='IB0066';;
+ 'PIO 3324        ') ccul='I0067_PIO_3324';culvar='IB0067';;
+ 'PIO 3475        ') ccul='I0068_PIO_3475';culvar='IB0068';;
+ 'PIO 3475 orig   ') ccul='I0068_PIOo_3475';culvar='IB0068';;
+ 'PIO 3790        ') ccul='I0069_PIO_3790';culvar='IB0069';;
+esac
+
+doutc=${dout}/${ccul}
+mkdir -p ${doutc}
+
+#echo "done dir=" ${doutc}
+
+########## compute changes in Genotype parameters:  P, G #############################
+ipar=0
+for nstep in ${lstep} ;  do
+nstepm1=`expr ${nstep} - 1 `
+eval nst[$ipar]=${nstep}
+eval nrint[$ipar]=${nstepm1}
+ipar=`expr ${ipar} + 1 `
+done
+#n='*'
+#echo "nst=" $( eval echo \${nst[$n]})
+#echo "nrint=" $( eval echo \${nrint[$n]})
+
+ipar=0
+for fac in ${lfac}  ;  do
+eval ifac[$ipar]=${fac}
+ipar=`expr ${ipar} + 1`
+done
+#n='*'
+#echo "ifac=" $( eval echo \${ifac[$n]})
+
+ipar=0
+for valmin in ${lmin}  ;  do
+eval vmin[$ipar]=${valmin}
+ipar=`expr ${ipar} + 1`
+done
+#n='*'
+#echo "vmin=" $( eval echo \${vmin[$n]})
+
+ipar=0
+for valmax in ${lmax} ;  do
+eval vmax[$ipar]=${valmax}
+ipar=`expr ${ipar} + 1`
+done
+#n='*'
+#echo "vmax=" $( eval echo \${vmax[$n]})
+
+ipar=0
+while [ ${ipar} -le ${nparm1} ] ; do
+#echo "MAX, MIN="  ${vmax[$ipar]} ${vmin[$ipar]}
+delt=`expr ${vmax[$ipar]} - ${vmin[$ipar]} `
+#echo "DELT=" ${delt}
+
+if [ ${delt} -eq 0 ] ; then
+del[$ipar]=0
+incr[$ipar]=1
+else
+eval del[$ipar]=`expr $delt \/ ${nrint[$ipar]} `
+eval incr[$ipar]=`expr ${del[$ipar]}`
+fi
+ipar=`expr ${ipar} + 1`
+done
+#n='*'
+#echo "del=" $( eval echo \${del[$n]})
+
+#echo "SUMMARY: " 
+#n='*'
+#eval echo \${vmin[$n]}
+#eval echo \${vmax[$n]}
+#eval echo \${del[$n]}
+#eval echo \${nst[$n]}
+#eval echo \${nrint[$n]}
+
+####  loop over changes in the Genotype parameters P, G in MZCER.CUL ###########
+
+declare -A valmat
+num_rows=${nparmax}
+num_columns=${nrintmax}
+
+ipar=0
+while [ ${ipar} -le ${nparm1} ] ; do
+ is=0
+  while [ ${is} -le ${nrint[${ipar}]} ] ; do
+   vv=`expr ${vmin[${ipar}]} + ${is} \* ${del[${ipar}]} `
+   eval valmat[${ipar},${is}]=${vv}
+#   echo "IPAR=" ${ipar} "is=" ${is} "vv=" ${vv} "valmat="  ${valmat[${ipar},${is}]}
+   is=`expr ${is} + 1 `
+  done
+#   echo "val1s="  ${valmat[${ipar},0]}
+#   echo "valee="  ${valmat[${ipar},2]}
+#   echo "val1e="  ${valmat[${ipar},${nrint[${ipar}]}]}
+ipar=`expr ${ipar} + 1 `
+done
+
+
+#num_rows=${nparmax}
+#num_columns=${nrintmax}
+f2=" %9s"
+for ((i=0;i<=${nparm1};i++)) do
+    printf "$f2"  $i
+    for ((j=0;j<=${nrint[i]};j++)) do
+        printf "$f2 "    ${valmat[$i,$j]}
+    done
+#    echo
+done
+
+##############################
+echo "marges P0:" ${valmat[0,0]} ${valmat[0,${nrint[0]}]}
+echo "marges P1:" ${valmat[1,0]} ${valmat[1,${nrint[1]}]}
+echo "marges P2:" ${valmat[2,0]} ${valmat[2,${nrint[2]}]}
+echo "marges P3:" ${valmat[3,0]} ${valmat[3,${nrint[3]}]}
+echo "marges P4:" ${valmat[4,0]} ${valmat[4,${nrint[4]}]}
+echo "marges P5:" ${valmat[5,0]} ${valmat[5,${nrint[5]}]}
+echo "INCR=" ${incr[0]} ${incr[1]} ${incr[2]} ${incr[3]} ${incr[4]} ${incr[5]}
+
+
+
+if [ ${IDT} -eq 1 ] ; then
+
+#### P,G loop & runs: ############################
+irun=0
+for  ch0 in $(seq ${valmat[0,0]} ${incr[0]} ${valmat[0,${nrint[0]}]}  ) ; do
+echo "del=" ${del[0]}
+for  ch1 in $(seq ${valmat[1,0]} ${incr[1]} ${valmat[1,${nrint[1]}]}  ) ; do
+echo "del=" ${del[1]}
+for  ch2 in $(seq ${valmat[2,0]} ${incr[2]} ${valmat[2,${nrint[2]}]}  ) ; do
+echo "del=" ${del[2]}
+for  ch3 in $(seq ${valmat[3,0]} ${incr[3]} ${valmat[3,${nrint[3]}]}  ) ; do
+echo "del=" ${del[3]}
+for  ch4 in $(seq ${valmat[4,0]} ${incr[4]} ${valmat[4,${nrint[4]}]}  ) ; do
+echo "del=" ${del[4]}
+for  ch5 in $(seq ${valmat[5,0]} ${incr[5]} ${valmat[5,${nrint[5]}]}  ) ; do
+echo "del=" ${del[5]}
+
+irun=`expr ${irun} + 1 `
+
+echo "IRUN=" ${irun}
+
+echo "ITER=" ${ch0} ${ch1}  ${ch2} ${ch3} ${ch4} ${ch5}
+echo "###############################################################################"
+#echo "###############################################################################"
+
+iter=${ch0}_${ch1}_${ch2}_${ch3}_${ch4}_${ch5}
+
+doutc3=${doutc}/ch0_${ch0}/ch1_${ch1}/ch2_${ch2}/ch3_${ch3}/ch4_${ch4}/ch5_${ch5}
+doutc4=${doutc}/Merged_ch_${kode}_${scen}_${model}
+doutc4s=${doutc4}/Namelists_saves
+mkdir -p ${doutc3} ${doutc4} ${doutc4s}
+dwkt=${doutc3}/tmp
+mkdir -p ${dwkt}
+
+cd ${dwkt}
+############
+
+\rm fort.4
+
+cat << EOF > ${dwkt}/fort.4
+\$namexp
+pn=${ch0},${ch1},${ch2},${ch3},${ch4},${ch5},4*0.
+zfac=${ifac[0]},${ifac[1]},${ifac[2]},${ifac[3]},${ifac[4]},${ifac[5]},4*1.
+cvar='${culvar}'
+ctype='${cultype}'
+npcult=${npar}
+/
+EOF
+
+\rm read_${clexp}_local.F90 a.out input.txt
+cp ${daux}/read_${clexp}_dynamical_genotype_params.F90 read_${clexp}_local.F90
+cp ${daux}/${clexp}${vmod}.${sufix}_base input.txt
+gfortran read_${clexp}_local.F90
+./a.out
+\mv ${dwkt}/output.txt  ${d0}/${clexp}${vmod}.${sufix}
+
+
+#echo "file=" ${d0}/${clexp}${vmod}.${sufix}
+ls -l ${d0}/${clexp}${vmod}.${sufix}
+
+cd ${d0}
+cp ${daux}/dscm048_calibrated dscm048_current_run
+
+exeopt='A '${fax}' NA'
+
+### noprint: 
+./dscm048_current_run ${exeopt}  1>${doutc3}/o1_${yy} \
+                     2>${doutc3}/o2
+
+/usr/bin/sed -e "1,21d"  < ${doutc3}/o1_${yy} > ${doutc3}/o1_${yy}.txt
+
+
+\rm ${doutc3}/inforun
+cat << EOF > ${doutc3}/inforun
+'  '
+year; ${yy} scen: ${scen} model: ${model} iter: ${ch0} ${ch1} ${ch2} ${ch3} ${ch4} ${ch5} 
+EOF
+
+\rm ${doutc3}/Info
+cat ${doutc3}/inforun ${doutc3}/o1_${yy}.txt > ${doutc3}/Info
+if [ ${irun} -eq 1 ] ; then
+cp ${doutc3}/Info ${doutc4}/Info_all_IDEOTYPE
+echo "FIRST case !"
+ls -l ${doutc4}/Info_all_IDEOTYPE
+else 
+cat ${doutc4}/Info_all_IDEOTYPE ${doutc3}/Info > ${doutc4}/Info_all_IDEOTYPE_tmp
+mv ${doutc4}/Info_all_IDEOTYPE_tmp ${doutc4}/Info_all_IDEOTYPE
+
+### remove Failures for Plot ..
+sed -e '/^  Crop/d'<  ${doutc4}/Info_all_IDEOTYPE > ${doutc4}/Info_all_IDEOTYPE_miss1
+sed -e '/^Crop/d'  < ${doutc4}/Info_all_IDEOTYPE_miss1 > ${doutc4}/Info_all_IDEOTYPE_miss2
+#### remove the first empty line (was a "Crop failure..." )
+sed -e '/^$/d' < ${doutc4}/Info_all_IDEOTYPE_miss2 > ${doutc4}/Info_all_IDEOTYPE_miss
+###################
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss1
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss2
+ls -l ${doutc4}/Info_all_IDEOTYPE_miss
+fi
+
+ 
+\rm *.OUT 
+cp ${d0}/${clexp}${vmod}.${sufix} ${doutc4s}/${clexp}${vmod}.${sufix}_${cltest}_${iter}
+
+
+  done
+  done
+  done
+  done
+  done
+  done
+#echo "done: P,G loops and runs" 
+#echo "#############################"
+
+#if [ ${IDT} -ne 1 ] ; then
+
+else
+echo "###################################### CASE kode= ${kode} ###################"
+
+cp ${daux}/${clexp}${vmod}.${sufix}_base ${d0}/${clexp}${vmod}.${sufix}
+
+
+ch0=1
+ch1=1
+ch2=1
+ch3=1
+ch4=1
+ch5=1
+
+irun=1
+
+doutc3=${doutc}/ch0_${ch0}/ch1_${ch1}/ch2_${ch2}/ch3_${ch3}/ch4_${ch4}/ch5_${ch5}
+doutc4=${doutc}/Merged_ch_${kode}_${scen}_${model}
+doutc4s=${doutc4}/Namelists_saves
+mkdir -p ${doutc3} ${doutc4} ${doutc4s}
+dwkt=${doutc3}/tmp
+mkdir -p ${dwkt}
+
+cd ${d0}
+cp ${daux}/dscm048_calibrated dscm048_current_run
+
+exeopt='A '${fax}' NA'
+./dscm048_current_run ${exeopt}  1>${doutc3}/o1_${yy} \
+                     2>${doutc3}/o2
+/usr/bin/sed -e "1,21d"  < ${doutc3}/o1_${yy} > ${doutc3}/o1_${yy}.txt
+
+\rm ${doutc3}/inforun
+cat << EOF > ${doutc3}/inforun
+'  '
+year; ${yy} scen: ${scen} model: ${model} iter: ${ch0} ${ch1} ${ch2} ${ch3} ${ch4} ${ch5} 
+EOF
+
+\rm ${doutc3}/Info
+cat ${doutc3}/inforun ${doutc3}/o1_${yy}.txt > ${doutc3}/Info
+
+# allways irun=1 in this case !!
+if [ ${irun} -eq 1 ] ; then
+cp ${doutc3}/Info ${doutc4}/Info_all_IDEOTYPE
+echo "FIRST case !"
+ls -l ${doutc4}/Info_all_IDEOTYPE
+
+### remove Failures ..
+sed -e '/^  Crop/d'<  ${doutc4}/Info_all_IDEOTYPE > ${doutc4}/Info_all_IDEOTYPE_miss1
+sed -e '/^Crop/d'  < ${doutc4}/Info_all_IDEOTYPE_miss1 > ${doutc4}/Info_all_IDEOTYPE_miss2
+#### remove the first empty line (was a "Crop failure..." )
+sed -e '/^$/d' < ${doutc4}/Info_all_IDEOTYPE_miss2 > ${doutc4}/Info_all_IDEOTYPE_miss
+###################
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss1
+\rm   ${doutc4}/Info_all_IDEOTYPE_miss2
+ls -l ${doutc4}/Info_all_IDEOTYPE_miss
+
+fi
+
+ 
+\rm *.OUT 
+cp ${d0}/${clexp}${vmod}.${sufix} ${doutc4s}/${clexp}${vmod}.${sufix}_${cltest}_${iter}
+
+# end:  if [ ${IDT} -ne 1 ] ; then
+
+
+#dout_link0=/home_DT4/WORK_RUNS_Prepclim/DSSAT_RUNS_Genotipare/RUN/USER_REQ/PLOT_user/Out_link
+dout_link=${dout_link0}/ucod_${ukode}/Exp_${kode}/${scen}/${cmod}
+mkdir -p ${dout_link0}/ucod_${ukode}
+mkdir -p ${dout_link}
+
+cp ${doutc4}/Info_all_IDEOTYPE_miss  \
+     ${dout_link}/Info_all_IDEOTYPE_miss_${scen}_${yy}
+fi
+
+
+
+######################################################
+#mv ${doutc4}/Info_all_IDEOTYPE_miss ${doutc4}/Info_all_IDEOTYPE_YEAR_${yy}_miss
+  done
+echo "DONE, culture type=" ${ccul}
+echo "###################"
+
+######################################################################################
+
+echo "Results in:" ${doutc4}
+
+################################################################
+
+
+#mv ${d0}/${fax} ${dout}/${fax}_Y${yy}
+cp ${d0}/${fax} ${dout}/${fax}_Y${yy}
+echo "DONE, year loop=" ${yy}
+
+yy=`expr ${yy} + 1 `
+\rm -rf ${doutc}/ch* 
+done
+
+
+echo "DONE, model=" ${model}
+done
+
+echo "DONE, scen=" ${scen}
+done
+
+############ Plot year: ##############
+dplot=${dout}/PLOT_user/ucod_${ukode}
+dauxplot=${daux}/Auxil_Plot
+mkdir -p ${dplot}
+
+\rm ${dplot}/namplot
+cat << EOF > ${dplot}/namplot
+#!/bin/sh
+#
+var=Flo
+uscen=${uscen}
+kode=${kode}
+ukode=${ukode}
+part=${part}
+uslice='${tsl}'
+out_mean=${out_mean}
+out_probab=${out_probab}
+out_extreme=${out_extreme}
+out_ideotip=${out_ideotip}
+out_txt=${out_txt}
+out_jpg=${out_jpg}
+EOF
+#
+\rm ${dplot0}/scr_User_Plot
+cat ${dplot}/namplot ${dauxplot}/scr_User_Plot_base > ${dplot}/scr_User_Plot
+
+
+###############################################################################
+
+echo "datain0=" ${datain0}
+###############################################################################
+###############################################################################
+#########################################################################
+
