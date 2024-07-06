@@ -3,7 +3,7 @@ din=~/USER_Request
 dwkt=${din}/tmp
 dsave=${din}/save
 mkdir -p ${dwkt} ${dsave}
-drun=~/USER_RUNS_Crop_and_Genotype_optimisation/USER_Runs
+drun=~/USER_RUNS_Crop_and_optimisation
 daux=${din}/Auxil
 
 cd ${dwkt}
