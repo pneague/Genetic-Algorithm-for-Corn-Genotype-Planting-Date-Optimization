@@ -1,0 +1,26 @@
+#!/bin/sh
+din=~/USER_Request
+dwkt=${din}/tmp
+dsave=${din}/save
+mkdir -p ${dwkt} ${dsave}
+drun=~/USER_RUNS_Crop_and_Genotype_optimisation/USER_Runs
+daux=${din}/Auxil
+
+cd ${dwkt}
+\rm list_fauser
+ls ${din}/*txt > list_fauser
+for fain in $(cat list_fauser) ; do
+echo "#################################"
+echo "Treating user request cf. user input file:" ${fain}
+echo "#################################"
+\rm scr_USER_run
+cat ${daux}/header.txt ${fain} ${daux}/scr_USER_base > \
+    ${drun}/scr_USER_run
+
+chmod u+x ${drun}/scr_USER_base_merged
+
+${drun}/scr_USER_run   1>o1_user  2>o2_user
+
+done
+mv ${din}/*txt ${dsave}
+######################################################
