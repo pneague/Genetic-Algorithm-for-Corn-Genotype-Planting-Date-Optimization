@@ -1,0 +1,25 @@
+*Output file list
+
+@FILENAME          DESCRIPTION
+FIFU9901.OEB     Daily soil-plant-atmosphere output file           
+FIFU9901.OPG     Daily plant growth output file                    
+FIFU9901.OPN     Daily plant nitrogen output file                  
+FIFU9901.OSN     Daily inorganic soil N output file                
+FIFU9901.OSC     Daily soil carbon output file                     
+FIFU9901.OTS     Daily soil temperature output file                
+FIFU9901.OSW     Daily soil water output file                      
+FIFU9901.OWE     Daily weather output file                         
+Mulch.OUT          Daily surface mulch output file                   
+FIFU9901.ONO     Soil N2O and N2 daily emissions output            
+FIFU9901.OEV     Evaluation output file (simulated vs. measured)   
+FIFU9901.OOV     Seasonal overview output file                     
+SoilCBal.OUT       Seasonal soil carbon balance                      
+SoilCBalSum.OUT    Soil C balance summary                            
+SoilNBalSum.OUT    Soil N balance summary                            
+SoilNiBal.OUT      Seasonal inorganic soil N balance                 
+SoilNoBal.OUT      Seasonal organic soil N balance                   
+SoilWatBal.OUT     Seasonal soil water balance                       
+FIFU9901.OSU     Seasonal summary output file                      
+INFO.OUT           Information output file                           
+WARNING.OUT        Warning messages                                  
+LUN.LST            List of output files generated                    
