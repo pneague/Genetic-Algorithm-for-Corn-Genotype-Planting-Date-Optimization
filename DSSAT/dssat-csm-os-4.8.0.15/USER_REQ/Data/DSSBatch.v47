@@ -1,0 +1,18 @@
+$BATCH(MAIZE)
+!
+! Directory    : C:\DSSAT47\Maize
+! Command Line : C:\DSSAT47\DSCSM047.EXE MZCER047 B DSSBatch.v47
+! Crop         : Maize           
+! Experiment   : BRPI0202.MZX
+! ExpNo        : 1
+! Debug        : C:\DSSAT47\DSCSM047.EXE MZCER047 " B DSSBatch.v47"
+!
+@FILEX                                                                                        TRTNO     RP     SQ     OP     CO
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     1      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     2      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     3      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     4      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     5      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     6      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     7      1      0      0      0
+C:\DSSAT47\Maize\BRPI0202.MZX                                                                     8      1      0      0      0

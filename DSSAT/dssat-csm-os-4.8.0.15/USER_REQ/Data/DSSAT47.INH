@@ -1,0 +1,127 @@
+*EXP.DETAILS: BRPI0202MZ MAIZE IRRIGATED AND RAINFALL                                
+
+*FILES
+@N  EXP.DATA    AFILE        ADIR
+  1 EXP         BRPI0202.MZA C:\DSSAT47\Maize\                                                               
+@N  SPECIES     SPFILE       SPDIR
+  1 SPE         MZCER047.SPE C:\DSSAT47\GENOTYPE\                                                            
+@N  ECOTYPE     EFILE        EDIR
+  1 ECO         MZCER047.ECO C:\DSSAT47\GENOTYPE\                                                            
+@N  CULTIVAR    CFILE        CDIR
+  1 CUL         MZCER047.CUL C:\DSSAT47\GENOTYPE\                                                            
+@N  SOIL        SFILE        SDIR
+  1 SOIL        BR.SOL       C:\DSSAT47\SOIL\                                                                
+@N  WEATHER     WFILE        WDIR
+  1 WEATH       BRPI0201.WTH C:\DSSAT47\Weather\                                                             
+
+*SIMULATION CONTROL
+@N  GENERAL     NYERS NREPS START   SDATE RSEED SNAME.................... MODEL...
+  1 GE              1     1     S 2002060  2150 2002 Maize Experiment Ir  MZCER047
+@N  OPTIONS     WATER NITRO SYMBI PHOSP POTAS DISES  CHEM  TILL   CO2
+  1 OP              Y     Y     N     N     N     N     N     Y     M
+@N  METHODS     WTHER INCON LIGHT EVAPO INFIL PHOTO HYDRO NSWIT SOMDY MESEV MESOL METMP MEGHG
+  1 ME              M     M     E     R     S     R     R     1     G     S     2     D     0
+@N  MANAGEMENT  PLANT IRRIG FERTI RESID HARVS
+  1 MA              R     R     R     N     M
+@N  OUTPUTS     FNAME OVVEW SUMRY FROPT GROUT CAOUT WAOUT NIOUT MIOUT DIOUT  LONG CHOUT OPOUT
+  1 OU              N     Y     Y     1     Y     Y     Y     Y     N     N     Y     N     N
+
+!AUTOMATIC MANAGEM
+@N  PLANTING      PFRST   PLAST PH2OL PH2OU PH2OD PSTMX PSTMN
+  1 PL          2002072 2002072   40.  100.   30.   40.   10.
+@N  IRRIGATION  IMDEP ITHRL ITHRU IROFF IMETH IRAMT IREFF
+  1 IR            40.   50.  100. GS000 IR004  10.0 0.900
+@N  NITROGEN    NMDEP NMTHR NAMNT NCODE NAOFF
+  1 NI            30.   50.   25. FE001 GS000
+@N  RESIDUES    RIPCN RTIME RIDEP
+  1 RE           100.     1   20.
+@N  HARVEST     HFRST   HLAST HPCNP HRCNR
+  1 HA              0 2002320  100.    0.
+
+*TREATMENTS
+@N   R O C TNAME....................  CU  FL  SA  IC  MP  MI  MF  MR  MC  MT  ME  MH  SM
+  8  1 0 0 EXCELER - IRRIGATED         4   2   0   2   1   1   2   0   0   0   0   0   1
+
+*CULTIVARS
+@C  CR INGENO CNAME
+  4 MZ IB0174 EXCELER         
+
+*FIELDS
+@L  ID_FIELD WSTA....  FLSA  FLOB  FLDT  FLDD  FLDS  FLST SLTX   SLDP ID_SOIL
+  2 BRPI0002 BRPI0201   0.0    0. DR000    0.  100. 00000 C      120. BRPI020002
+@L             XCRD            YCRD      ELEV              AREA  SLEN  FLWR  SLAS PRMGT
+  2         0.00000         0.00000      0.00               1.0  100.   1.0   0.0   -99   -99
+
+*INITIAL CONDITIONS
+@C  PCR     ICDAT  ICRT  ICND  ICRN  ICRE  ICWD ICRES ICREN ICREP ICRIP ICRID
+  2 MZ    2002060     0     0  1.00  1.00   0.0  5800  1.50  0.00  100.   15.
+@C   ICBL  SH2O  SNH4  SNO3
+  2    5. 0.260   0.4   3.9
+  2   15. 0.260   0.4   3.9
+  2   20. 0.260   0.4   3.9
+  2   30. 0.260   0.4   3.9
+  2   40. 0.260   0.4   3.9
+  2   67. 0.250   0.4   3.9
+  2   93. 0.250   0.4   3.9
+  2  120. 0.250   0.4   3.9
+  2  150. 0.311   0.0   0.0
+
+*PLANTING DETAILS
+@P    PDATE   EDATE  PPOP  PPOE  PLME  PLDS  PLRS  PLRD  PLDP  PLWT  PAGE  PENV  PLPH  SPRL
+  1 2002072 2002078   7.0   5.0     S     R   80.   45.   5.0  -99.  -99. -99.0 -99.0   0.0
+
+*IRRIGATION
+@I   IEFF  IDEP  ITHR  IEPT  IOFF  IAME  IAMT
+  1 0.900   30.   50.  100. GS000 IR001  10.0
+@I    IDATE  IROP IRVAL
+  1 2002075 IR004   7.0
+  1 2002079 IR004   7.0
+  1 2002089 IR004   7.0
+  1 2002091 IR004  13.0
+  1 2002095 IR004  13.0
+  1 2002097 IR004  13.0
+  1 2002099 IR004   7.0
+  1 2002101 IR004  13.0
+  1 2002103 IR004   7.0
+  1 2002105 IR004  13.0
+  1 2002107 IR004   7.0
+  1 2002109 IR004  13.0
+  1 2002112 IR004  13.0
+  1 2002114 IR004   7.0
+  1 2002116 IR004   7.0
+  1 2002128 IR004  13.0
+  1 2002130 IR004   4.0
+  1 2002133 IR004  13.0
+  1 2002136 IR004  13.0
+  1 2002148 IR004  13.0
+  1 2002151 IR004  13.0
+  1 2002154 IR004  13.0
+  1 2002158 IR004  13.0
+  1 2002162 IR004   4.0
+  1 2002167 IR004  13.0
+  1 2002170 IR004   4.0
+  1 2002172 IR004   6.0
+  1 2002176 IR004  13.0
+  1 2002179 IR004  13.0
+  1 2002182 IR004   9.0
+
+*FERTILIZERS
+@F    FDATE  FMCD  FACD  FDEP  FAMN  FAMP  FAMK  FAMC  FAMO  FOCD
+  2 2002072 FE014 AP004    5.   26.  -99.  -99.  -99.  -99.   -99
+  2 2002095 FE005 AP003    0.   50.    0.    0.    0.    0.   -99
+  2 2002113 FE005 AP003    0.   50.    0.    0.    0.    0.   -99
+
+*RESIDUES
+@R    RDATE  RCOD  RAMT  RESN  RESP  RESK  RINP  RDEP  RMET
+
+*CHEMICALS
+@C    CDATE CHCOD CHAMT  CHME CHDEP   CHT
+
+*TILLAGE
+@T    TDATE TIMPL  TDEP
+
+*ENVIRONMENT
+@E    ODATE  EDAY  ERAD  EMAX  EMIN ERAIN  ECO2  EDEW EWIND
+
+*HARVEST
+@H    HDATE  HSTG  HCOM HSIZE   HPC  HBPC
