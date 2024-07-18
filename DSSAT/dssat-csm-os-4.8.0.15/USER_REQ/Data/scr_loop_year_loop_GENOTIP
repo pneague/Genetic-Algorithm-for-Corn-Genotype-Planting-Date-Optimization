@@ -1,0 +1,272 @@
+#!/bin/sh
+
+#exeopt='A '${fax}' NA'
+############ sol: ######################################3
+soltype=1xN_CORR_soil_NOferti+ini_water_MARS_OPER
+csoltype=N1_noF+iniw
+
+#type=3xN_CORR+soil_ferti_OPER
+cp SOIL.SOL_orig_RO  SOIL.SOL
+cp SOIL.SOL_orig_RO  soil.sol
+
+######### genotype:class parameters ###########
+#class=GENOTIP_hist+scen
+clsensit='Genotype'
+clexp=MZCER
+vmod=048
+sufix=CUL
+cltest=PG
+# change percents:
+npar=6
+ch1=0
+ch2=0
+ch3=0
+ch4=0
+ch5=0
+ch6=0
+
+######## run setup: ###############################
+
+period=1
+###############
+#d0=/home/mcaian/MCaian/APPS/PED/DSSAT/FORTRAN/sources/EXPERIMENTS/MZCER/EXP_RO_Ctrl/dssat-csm-os-4.8.0.15/Data
+d00=/run/media/mcaian/Storage2/DSSAT/DSSAT_work_sept2022/FORTRAN/sources/EXPERIMENTS/MZCER/EXP_RO_Ctrl/Simulari_GENOTIP_hist+scen
+d0=${d00}/dssat-csm-os-4.8.0.15/Data
+datain0scen=/home/mcaian/MCaian/APPS/PED/DATA/Prel_OPER/EURO-CORDEX/Daily
+datain0ctrl=/home/mcaian/MCaian/APPS/PED/SITE/CPC/Date_WEATHER
+daux=${d00}/AUXIL
+
+
+#faxtempl=FIFU9901.MZX_work_3xN_CORR+soil_ferti_OPER
+faxtempl=FIFU9901.MZX_work_${soltype}
+fax=FIFU9901.MZX
+
+#model=MARS
+#scen=Ctrl
+#part=1
+
+#for model in ICHEC-EC-EARTH-SMHI-RCA4 CNRM-CERFACS-CNRM-CM5-SMHI-RCA4 MPI-M-MPI-ESM-LR-SMHI-RCA4 ; do
+#scen=historical
+#scen=rcp45
+#scen=rcp85
+
+model=MARS
+scen=Ctrl
+part=1
+#####################################
+
+# Ctrl) clscen=MARS ;clscen4=MARS;yst=1976; yen=2005;;
+#datain0=${datain0ctrl}/${scen}/${model}/Input_DSSAT;
+
+case ${scen} in \
+ Ctrl) clscen=MARS ;clscen4=MARS; datain0=${d0}/SAVES_WTHfiles_OPER_fin/SAVES_WTH/saves_Aug2022;
+        if [ ${part} -eq 1 ] ; then
+         yst=1976
+         yen=2005
+        fi;;
+ historical) clscen=HIST ;clscen4=HIST;datain0=${datain0scen}/${scen}/Input_DSSAT/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=1976
+         yen=2005
+        fi;;
+ rcp45) clscen=RCP45 ;clscen4=RCP4;datain0=${datain0scen}/${scen}/Input_DSSAT/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=2021
+         yen=2050
+        else 
+         yst=2070
+         yen=2099
+        fi ;; 
+ rcp85) clscen=RCP85 ;clscen4=RCP8;datain0=${datain0scen}/${scen}/Input_DSSAT/${model};
+        if [ ${part} -eq 1 ] ; then
+         yst=2021
+         yen=2050
+        else 
+         yst=2070
+         yen=2099
+        fi ;; 
+esac
+echo "datain0=" ${datain0}
+
+
+dexp00=${d0}/RES_${csoltype}+${clsensit}
+dexp0=${dexp00}/${scen}
+exp0=${dexp0}/${model}
+mkdir -p ${exp0}
+ 
+
+###################################################################
+
+
+cd ${d0}
+mkdir -p old_tmp
+mv ${clscen}*.WTH old_tmp
+mv ${clscen4}*.WTH old_tmp
+
+cp ${datain0}/${clscen}*.WTH .
+
+
+####################### the 2 loops: #########################
+##############################################################
+
+####  1. YEAR  loop ####### (make FIFU9901.MZX file) #############
+ys=${yst}
+#ye=${yen}
+ye=${yst}
+
+yy=${ys}
+while [ ${yy} -le ${ye} ] ; do 
+yy2t=`expr ${yy} | cut -c 3-4 `
+yy2=`expr ${yy2t} + 100 | cut -c 2-3 `
+echo "YEAR=" ${yy2}
+
+fawin=${clscen}${yy}01.WTH
+fawinl=${clscen4}${yy2}01.WTH
+mv ${fawin} ${fawinl}
+echo "fawin=" ${fawin}
+
+dout=${exp0}/YY_${yy}
+mkdir -p ${dout}
+
+\rm fin_tmp* ${fax}
+
+plday1='091'
+plday2='101'
+plday3='120'
+plday4='135'
+
+## harvest date
+/usr/bin/sed -e "1,\$s/1 95304/1 ${yy2}304/g" < ${d0}/${faxtempl} > fin_tmp1
+## irrigation date
+/usr/bin/sed -e "1,\$s/1 95115/1 ${yy2}115/g" <  fin_tmp1 > fin_tmp2
+## planting date date
+/usr/bin/sed -e "1,\$s/1 95${plday1}/1 ${yy2}${plday1}/g" <  fin_tmp2 > fin_tmp3
+/usr/bin/sed -e "1,\$s/2 95${plday2}/2 ${yy2}${plday2}/g" <  fin_tmp3 > fin_tmp4
+/usr/bin/sed -e "1,\$s/3 95${plday3}/3 ${yy2}${plday3}/g" <  fin_tmp4 > fin_tmp5
+/usr/bin/sed -e "1,\$s/4 95${plday4}/4 ${yy2}${plday4}/g" <  fin_tmp5 > fin_tmp6
+# harvest last
+/usr/bin/sed -e "1,\$s/95334/${yy2}334/g" <  fin_tmp6 > fin_tmp7
+# Wather file scen
+/usr/bin/sed -e "1,\$s/MARS/${clscen4}/g" <  fin_tmp7 > fin_tmp8
+## start   date date
+/usr/bin/sed -e "1,\$s/GE              1     1     S 95001/GE              ${period}     1     S ${yy2}001/g" <  fin_tmp8 > ${fax}
+
+#echo done, planting day loop, pday=' ${plday}
+#done
+\rm fin_tmp*
+
+
+#fawinl=${clscen4}${yy2}01.WTH
+###############################
+
+####  2. GENOTYPE loop (make MZCER.CUL file) #######
+
+for cultype in  'PIO 3475*       '  ; do
+
+echo "cultype=" ${cultype}
+
+case ${cultype} in \
+ 'PIO 3541        ') ccul='I0029_PIO_3541';culvar='IB0029';;
+ 'PIO 3707        ') ccul='I0030_PIO_3707';culvar='IB0030';;
+ 'PIO 3475*       ') ccul='I0031_PIOs_3475';culvar='IB0031';;
+ 'PIO 3382*       ') ccul='I0032_PIOs_3382';culvar='IB0032';;
+ 'PIO 3780        ') ccul='I0033_PIO_3780';culvar='IB0033';;
+ 'PIO 3780*       ') ccul='I0034_PIOs_3780';culvar='IB0034';;
+ 'PIO 3165        ') ccul='I0066_PIO_3324';culvar='IB0066';;
+ 'PIO 3324        ') ccul='I0067_PIO_3324';culvar='IB0067';;
+ 'PIO 3475        ') ccul='I0068_PIO_3475';culvar='IB0068';;
+ 'PIO 3475 orig   ') ccul='I0068_PIOo_3475';culvar='IB0068';;
+ 'PIO 3790        ') ccul='I0069_PIO_3790';culvar='IB0069';;
+esac
+
+doutc=${dout}/${ccul}
+mkdir -p ${doutc}
+
+echo "done dir=" ${doutc}
+
+for  ch1 in 2 5 10 ; do
+ for  ch2 in 2 5 10 ; do
+  for  ch3 in  2 5 10 ; do
+
+#for  ch1 in 2 5 10 20 30 40 50 ; do
+# for  ch2 in 2 5 10 20 30 40 50 ; do
+#  for  ch3 in 2 5 10 20 30 40 50 ; do
+
+#   for  ch4 in 2 5 10 20 30 40 50 ; do
+#    for  ch5 in 2 5 10 20 30 40 50 ; do
+#     for  ch6 in 2 5 10 20 30 40 50 ; do
+
+iter=${ch1}_${ch2}_${ch3}_${ch4}_${ch5}_${ch6}
+#dout=${dout0}/P1_${ch1}/P2_${ch2}/P3_${ch3}/iter_${iter}
+doutc2=${doutc}/iter_${iter}
+dwkt=${doutc2}/tmp
+mkdir -p  ${dwkt} ${doutc2} ${dwkt}
+
+cd ${dwkt}
+############
+
+\rm fort.4
+
+cat << EOF > ${dwkt}/fort.4
+\$namexp
+p=${ch1},${ch2},${ch3},${ch4},${ch5},${ch6},4*0.
+cvar='${culvar}'
+ctype='${cultype}'
+npcult=${npar}
+/
+EOF
+
+\rm read_${clexp}_local.F90 a.out input.txt
+cp ${daux}/read_${clexp}_new.F90 read_${clexp}_local.F90
+cp ${daux}/${clexp}${vmod}.${sufix}_base input.txt
+gfortran read_${clexp}_local.F90
+./a.out
+\mv ${dwkt}/output.txt  ${d0}/${clexp}${vmod}.${sufix}
+
+echo "file=" ${d0}/${clexp}${vmod}.${sufix}
+ls -l ${d0}/${clexp}${vmod}.${sufix}
+
+cd ${d0}
+
+exeopt='A '${fax}' NA'
+echo "exeopt=" ${exeopt}
+#./dscsm048 ${exeopt} 1>${doutc2}/o1_${yy} \
+
+### noprint: 
+./dscm048_fin_teste_14apr2022 ${exeopt}  1>${doutc2}/o1_${yy} \
+
+                     2>${doutc2}/o2_${yy}
+mv *.OUT ${doutc2}
+mv ${d0}/${clexp}${vmod}.${sufix} ${doutc2}/${clexp}${vmod}.${sufix}_${cltest}_${iter}
+
+ls -l ${fax}
+mv ${fax} ${doutc2}
+ls -l ${doutc2}/${fax}
+exit
+
+  done
+echo "done, iter_ch3" 
+echo "#############################"
+ done
+echo "done, iter_ch2" 
+echo "#############################"
+done
+echo "done, iter_ch1" 
+echo "#############################"
+######################################################
+echo "DONE, culture type=" ${ccul}
+echo "###################"
+echo "Results in:" ${doutc2}
+done
+################################################################
+
+
+echo "DONE, year loop=" ${yy}
+yy=`expr ${yy} + 1 `
+done
+
+#echo "DONE, model=" ${model}
+#done
+
+#########################################################################
+
